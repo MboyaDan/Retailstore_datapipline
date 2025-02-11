@@ -1,3 +1,5 @@
+
+x# Ignore Airflow logs and DB files
 logs/
 airflow.db
 *.pyc
@@ -6,4 +8,3 @@ __pycache__/
 *.log
 dags/__pycache__/
 dags/*.pyc
-retailstorepipline-*.json

@@ -24,8 +24,12 @@ services:
       - .env
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}
+      GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/retailstorepipline-718307efa143.json
     volumes:
-      - /Users/mboya/work_k/RS_Data_Pipline/dags:/opt/airflow/dags 
+      - /Users/mboya/work_k/RS_Data_Pipline/dags:/opt/airflow/dags
+      - /Users/mboya/work_k/RS_Data_Pipline/data:/opt/airflow/data
+      - /Users/mboya/work_k/RS_Data_Pipline/scripts:/opt/airflow/scripts
+      - /Users/mboya/work_k/RS_Data_Pipline/retailstorepipline-718307efa143.json:/opt/airflow/retailstorepipline-718307efa143.json
     command: ["airflow", "scheduler"]
 
   airflow_webserver:
@@ -39,8 +43,12 @@ services:
       - .env
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}
+      GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/retailstorepipline-718307efa143.json
     volumes:
       - /Users/mboya/work_k/RS_Data_Pipline/dags:/opt/airflow/dags
+      - /Users/mboya/work_k/RS_Data_Pipline/data:/opt/airflow/data
+      - /Users/mboya/work_k/RS_Data_Pipline/scripts:/opt/airflow/scripts
+      - /Users/mboya/work_k/RS_Data_Pipline/retailstorepipline-718307efa143.json:/opt/airflow/retailstorepipline-718307efa143.json
     ports:
       - "8080:8080"
     command: ["airflow", "webserver"]
@@ -62,3 +70,6 @@ services:
 
 volumes:
   postgres_data:
+  airflow_data:
+  airflow_scripts:
+  airflow_dags:
