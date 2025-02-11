@@ -1,0 +1,64 @@
+services:
+  postgres_db:
+    image: postgres:14
+    container_name: postgres_db
+    restart: always
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  airflow_scheduler:
+    image: apache/airflow:2.7.3
+    container_name: airflow_scheduler
+    restart: always
+    depends_on:
+      - postgres_db
+    env_file:
+      - .env
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}
+    volumes:
+      - /Users/mboya/work_k/RS_Data_Pipline/dags:/opt/airflow/dags 
+    command: ["airflow", "scheduler"]
+
+  airflow_webserver:
+    image: apache/airflow:2.7.3
+    container_name: airflow_webserver
+    restart: always
+    depends_on:
+      - postgres_db
+      - airflow_scheduler
+    env_file:
+      - .env
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}
+    volumes:
+      - /Users/mboya/work_k/RS_Data_Pipline/dags:/opt/airflow/dags
+    ports:
+      - "8080:8080"
+    command: ["airflow", "webserver"]
+
+  airflow_init:
+    image: apache/airflow:2.7.3
+    container_name: airflow_init
+    depends_on:
+      - postgres_db
+    env_file:
+      - .env
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        airflow db migrate &&
+        airflow users create --username ${AIRFLOW_ADMIN_USER} --password ${AIRFLOW_ADMIN_PASSWORD} --firstname Admin --lastname User --role Admin --email admin@example.com
+
+volumes:
+  postgres_data:

@@ -1,0 +1,9 @@
+# Ignore Airflow logs and DB files
+logs/
+airflow.db
+*.pyc
+__pycache__/
+.env
+*.log
+dags/__pycache__/
+dags/*.pyc
