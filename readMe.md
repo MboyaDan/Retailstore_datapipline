@@ -39,10 +39,12 @@ RS_Data_Pipline/
 │── dags/                     # Airflow DAGs folder
 │   ├── retail_dag.py         # Main DAG file
 │── scripts/                  # SQL & Python scripts
-│── data/                     # Sample dataset (if any)
+│── data/                     # Sample dataset (if any, usually ignored in Git)
 │── docker-compose.yml        # Docker setup for Airflow & PostgreSQL
+│── Dockerfile                # Docker image definition for Airflow environment
 │── .gitignore                # Git ignore file
 │── README.md                 # Project documentation
+
 ```
 
 ## 📌 Installation & Setup
