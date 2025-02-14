@@ -1,4 +1,5 @@
 services:
+  # PostgreSQL Database
   postgres_db:
     image: postgres:14
     container_name: postgres_db
@@ -13,54 +14,24 @@ services:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  airflow_scheduler:
-    image: apache/airflow:2.7.3
-    container_name: airflow_scheduler
-    restart: always
-    depends_on:
-      - postgres_db
-    env_file:
-      - .env
-    environment:
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}
-      GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/retailstorepipline-718307efa143.json
-    volumes:
-      - /Users/mboya/work_k/RS_Data_Pipline/dags:/opt/airflow/dags
-      - /Users/mboya/work_k/RS_Data_Pipline/data:/opt/airflow/data
-      - /Users/mboya/work_k/RS_Data_Pipline/scripts:/opt/airflow/scripts
-      - /Users/mboya/work_k/RS_Data_Pipline/retailstorepipline-718307efa143.json:/opt/airflow/retailstorepipline-718307efa143.json
-    command: ["airflow", "scheduler"]
-
-  airflow_webserver:
-    image: apache/airflow:2.7.3
-    container_name: airflow_webserver
-    restart: always
-    depends_on:
-      - postgres_db
-      - airflow_scheduler
-    env_file:
-      - .env
-    environment:
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}
-      GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/retailstorepipline-718307efa143.json
-    volumes:
-      - /Users/mboya/work_k/RS_Data_Pipline/dags:/opt/airflow/dags
-      - /Users/mboya/work_k/RS_Data_Pipline/data:/opt/airflow/data
-      - /Users/mboya/work_k/RS_Data_Pipline/scripts:/opt/airflow/scripts
-      - /Users/mboya/work_k/RS_Data_Pipline/retailstorepipline-718307efa143.json:/opt/airflow/retailstorepipline-718307efa143.json
-    ports:
-      - "8080:8080"
-    command: ["airflow", "webserver"]
-
+  # Airflow Database Initialization
   airflow_init:
-    image: apache/airflow:2.7.3
+    build: .
+    image: custom_airflow:latest  # Ensure correct image reference
     container_name: airflow_init
     depends_on:
-      - postgres_db
+      postgres_db:
+        condition: service_healthy
     env_file:
       - .env
     environment:
+      AIRFLOW_HOME: /opt/airflow
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}
     entrypoint: ["/bin/bash", "-c"]
     command:
@@ -68,8 +39,55 @@ services:
         airflow db migrate &&
         airflow users create --username ${AIRFLOW_ADMIN_USER} --password ${AIRFLOW_ADMIN_PASSWORD} --firstname Admin --lastname User --role Admin --email admin@example.com
 
+  # Airflow Scheduler
+  airflow_scheduler:
+    image: custom_airflow:latest
+    container_name: airflow_scheduler
+    restart: always
+    depends_on:
+      airflow_init:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+    environment:
+      AIRFLOW_HOME: /opt/airflow
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}
+      GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/retailstorepipline-718307efa143.json
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor 
+    volumes:
+      - ./dags:/opt/airflow/dags                  
+      - ./scripts:/opt/airflow/scripts            
+      - airflow_logs:/opt/airflow/logs
+      - ./data:/opt/airflow/data
+      - ./retailstorepipline-718307efa143.json:/opt/airflow/retailstorepipline-718307efa143.json
+    command: ["airflow", "scheduler"]
+
+  # Airflow Webserver
+  airflow_webserver:
+    image: custom_airflow:latest
+    container_name: airflow_webserver
+    restart: always
+    depends_on:
+      airflow_scheduler:
+        condition: service_started
+    env_file:
+      - .env
+    environment:
+      AIRFLOW_HOME: /opt/airflow
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}
+      GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/retailstorepipline-718307efa143.json
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor 
+    volumes:
+      - ./dags:/opt/airflow/dags            
+      - ./scripts:/opt/airflow/scripts      
+      - airflow_logs:/opt/airflow/logs
+      - ./data:/opt/airflow/data
+      - ./retailstorepipline-718307efa143.json:/opt/airflow/retailstorepipline-718307efa143.json
+    ports:
+      - "8080:8080"
+    command: ["airflow", "webserver"]
+
 volumes:
   postgres_data:
   airflow_data:
-  airflow_scripts:
-  airflow_dags:
+  airflow_logs:

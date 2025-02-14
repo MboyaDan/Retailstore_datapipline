@@ -7,3 +7,4 @@ __pycache__/
 dags/__pycache__/
 dags/*.pyc
 retailstorepipline-*.json
+data/
