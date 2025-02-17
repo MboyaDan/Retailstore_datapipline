@@ -1,9 +1,10 @@
 # Use Apache Airflow base image with Python 3.9
 FROM apache/airflow:2.7.3-python3.9
 
+# Switch to root user for installations
 USER root
 
-# Install dependencies (including Java for Spark)
+# Install system dependencies (including Java for Spark)
 RUN apt-get update && apt-get install -y \
     curl \
     python3-pip \
@@ -32,3 +33,12 @@ USER airflow
 # Copy and install Python dependencies
 COPY requirements.txt /requirements.txt
 RUN pip install --no-cache-dir -r /requirements.txt
+
+# Set environment variables for Google Cloud authentication
+ENV GOOGLE_APPLICATION_CREDENTIALS="/opt/airflow/gcs_credentials.json"
+
+# Copy Airflow DAGs
+COPY dags /opt/airflow/dags/
+
+# Set working directory
+WORKDIR /opt/airflow

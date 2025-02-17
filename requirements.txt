@@ -19,3 +19,4 @@ psycopg2-binary==2.9.9
 # Additional Airflow Dependencies  
 apache-airflow-providers-google==10.13.0  
 apache-airflow-providers-postgres==5.7.0  
+apache-airflow-providers-apache-spark

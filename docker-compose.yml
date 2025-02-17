@@ -60,7 +60,12 @@ services:
       - airflow_logs:/opt/airflow/logs
       - ./data:/opt/airflow/data
       - ./retailstorepipline-718307efa143.json:/opt/airflow/retailstorepipline-718307efa143.json
-    command: ["airflow", "scheduler"]
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        gcloud auth activate-service-account --key-file=/opt/airflow/retailstorepipline-718307efa143.json &&
+        airflow db upgrade &&
+        exec airflow scheduler
 
   # Airflow Webserver
   airflow_webserver:
@@ -85,7 +90,12 @@ services:
       - ./retailstorepipline-718307efa143.json:/opt/airflow/retailstorepipline-718307efa143.json
     ports:
       - "8080:8080"
-    command: ["airflow", "webserver"]
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        gcloud auth activate-service-account --key-file=/opt/airflow/retailstorepipline-718307efa143.json &&
+        airflow db upgrade &&
+        exec airflow webserver
 
 volumes:
   postgres_data:

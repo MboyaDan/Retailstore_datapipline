@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, row_number
+from pyspark.sql.functions import col, row_number, to_date, date_format
 from pyspark.sql.types import (
     StructType, StructField, IntegerType, DoubleType, StringType, TimestampType
 )
@@ -24,7 +24,7 @@ def transform_data():
             StructField("store_id", IntegerType(), False),
             StructField("quantity", IntegerType(), False),
             StructField("price", DoubleType(), False),
-            StructField("sale_date", TimestampType(), False)
+            StructField("sale_date", TimestampType(), False)  # Ensure timestamp type
         ])
         
         customers_schema = StructType([
@@ -32,7 +32,7 @@ def transform_data():
             StructField("customer_name", StringType(), False),
             StructField("email", StringType(), True),
             StructField("phone_number", StringType(), True),
-            StructField("city", StringType(), True),  # ✅ Added missing column
+            StructField("city", StringType(), True),
             StructField("signup_date", TimestampType(), True)
         ])
 
@@ -41,10 +41,18 @@ def transform_data():
         customers_path = "/opt/airflow/data/extracted/customers.csv.gz"
         output_path = "/opt/airflow/data/transformed/sales_customers.parquet"
 
-        # Read extracted data
-        logging.info("📥 Reading input files...")
-        df_sales = spark.read.csv(sales_path, schema=sales_schema, header=True)
-        df_customers = spark.read.csv(customers_path, schema=customers_schema, header=True)
+        # Read extracted data with schema enforcement
+        logging.info("\U0001F4E5 Reading input files...")
+        df_sales = spark.read.option("header", True) \
+            .option("inferSchema", True) \
+            .option("mode", "DROPMALFORMED") \
+            .csv(sales_path, schema=sales_schema)
+
+        df_customers = spark.read.option("header", True) \
+            .option("inferSchema", True) \
+            .option("mode", "DROPMALFORMED") \
+            .csv(customers_path, schema=customers_schema)
+        
         logging.info("✅ Successfully read input files.")
 
         # Handle missing values
@@ -58,17 +66,27 @@ def transform_data():
         # Join sales with customers
         df_transformed = df_sales.join(df_customers, "customer_id", "left")
 
-        # Select relevant columns
-        df_transformed = df_transformed.select(
-            col("sale_id"), col("customer_id"), col("customer_name"),
-            col("product_id"), col("store_id"), col("quantity"), col("price"),
-            col("sale_date"), col("email"), col("phone_number"), col("city"), col("signup_date")
-        )
+        # Convert `sale_date` to a proper date format for partitioning
+        df_transformed = df_transformed.withColumn("sale_date", date_format(col("sale_date"), "yyyy-MM-dd"))
+
+        # Select relevant columns and verify they exist before writing
+        expected_columns = [
+            "sale_id", "customer_id", "customer_name", "product_id", "store_id",
+            "quantity", "price", "sale_date", "email", "phone_number", "city", "signup_date"
+        ]
+
+        missing_columns = [col_name for col_name in expected_columns if col_name not in df_transformed.columns]
+        if missing_columns:
+            logging.error(f"❌ Missing columns in transformed data: {missing_columns}")
+            sys.exit(1)
 
         # Write the transformed data in Parquet format, partitioned by `sale_date` and `store_id`
-        logging.info("💾 Writing transformed data to Parquet...")
-        df_transformed.write.mode("overwrite").partitionBy("sale_date", "store_id").parquet(output_path)
-        logging.info("✅ Data transformation complete! 🚀")
+        logging.info(f"📦 Writing transformed data to {output_path}...")
+        df_transformed.write.mode("overwrite") \
+            .partitionBy("sale_date", "store_id") \
+            .parquet(output_path)
+
+        logging.info("✅ Data transformation completed successfully.")
 
         # Stop Spark session
         spark.stop()
