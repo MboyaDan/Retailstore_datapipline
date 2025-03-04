@@ -1,1 +1,30 @@
-"Hello, GCS!"
+"mboya@Mboyas-MacBook-Pro RS_Data_Pipline % docker exec -it postgres_db psql -U mboya -d retail_store
+
+psql (14.15 (Debian 14.15-1.pgdg120+1))
+Type "help" for help.
+
+retail_store=# SELECT ti.task_id, xcom.value
+FROM xcom
+JOIN task_instance ti ON xcom.task_id = ti.task_id
+WHERE ti.dag_id = 'load_to_bigquery_dag'
+ORDER BY ti.execution_date DESC
+LIMIT 5;
+ERROR:  column ti.execution_date does not exist
+LINE 5: ORDER BY ti.execution_date DESC
+                 ^
+retail_store=# SELECT ti.task_id, xcom.value
+FROM xcom
+JOIN task_instance ti ON xcom.task_id = ti.task_id
+WHERE ti.dag_id = 'load_to_bigquery_dag'
+ORDER BY ti.start_date DESC
+LIMIT 5;
+     task_id     |                                                                                                           value                                                                                                            
+-----------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ load_data_to_bq | \x22616972666c6f775f6c6f61645f746f5f62696771756572795f6c6f61645f646174615f746f5f62715f323032355f30325f31355430305f30305f30305f30305f30305f343735343433393666633335323739653338353535343331303465636437306222
+ load_data_to_bq | \x22616972666c6f775f6c6f61645f746f5f62696771756572795f6c6f61645f646174615f746f5f62715f323032355f30325f31345431325f30325f35345f3130393130365f30305f30305f313835383839313565353464633032373339646334633866383566303664363822
+ load_data_to_bq | \x7b22646174617365745f6964223a202272657461696c5f73746f7265222c202270726f6a6563745f6964223a202272657461696c73746f72657069706c696e65222c20227461626c655f6964223a202272657461696c5f73616c6573227d
+ load_data_to_bq | \x7b22646174617365745f6964223a202272657461696c5f73746f7265222c202270726f6a6563745f6964223a202272657461696c73746f72657069706c696e65222c20227461626c655f6964223a202272657461696c5f73616c6573227d
+ load_data_to_bq | \x7b22646174617365745f6964223a202272657461696c5f73746f7265222c202270726f6a6563745f6964223a202272657461696c73746f72657069706c696e65222c20227461626c655f6964223a202272657461696c5f73616c6573227d
+(5 rows)
+
+retail_store=# \q
